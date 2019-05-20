@@ -4,6 +4,7 @@ using UnityEngine;
 
 public enum FormationState
 {
+    None,
     Line,
     Square,
     Length
@@ -11,6 +12,9 @@ public enum FormationState
 
 public class MouseController : MonoBehaviour
 {
+    static MouseController instance;
+    public static MouseController Instance { get { return instance; } }
+
     public float mouseScreenScrollRadius = 10f;
     [Range(0f, 100f)]
     public float mouseScreenScrollSpeed = 5f;
@@ -27,7 +31,14 @@ public class MouseController : MonoBehaviour
 
     private void Awake()
     {
-        selectedObjs = new List<SelectableUnit>();
+        if (!instance)
+        {
+            instance = this;
+            DontDestroyOnLoad(this);
+            selectedObjs = new List<SelectableUnit>();
+        }
+        else
+            Destroy(this);
     }
 
     private void Update()
@@ -85,6 +96,8 @@ public class MouseController : MonoBehaviour
         {
             selectedObjs[i].leader = selectedObjs[0];
         }
+
+        SetFormation();
     }
 
     void MoveSelectedObjs()
@@ -94,11 +107,6 @@ public class MouseController : MonoBehaviour
         dest.y = 0;
 
         selectedObjs[0].SetDest(dest);
-        SetFormation();
-        //foreach (SelectableUnit t in selectedObjs)
-        //{
-        //    t.dest = dest;
-        //}
     }
 
     void SetFormation()
@@ -107,12 +115,12 @@ public class MouseController : MonoBehaviour
         switch (formation)
         {
             case FormationState.Line:
+                for (int i = 1; i < selectedObjs.Count; i++)
+                    selectedObjs[i].SetIndex(i);
                 return;
             case FormationState.Square:
-                for (int i=0;i<selectedObjs.Count;i++)
-                {
-                    selectedObjs[i].SetDest(selectedObjs[0].dest + -selectedObjs[0].transform.forward * (i / rt) * selectedObjs[i].sepRadius + selectedObjs[0].transform.right.normalized * (i % rt) * selectedObjs[i].sepRadius);
-                }
+                for (int i = 1; i < selectedObjs.Count; i++)
+                    selectedObjs[i].SetIndex(i / rt, i % rt);//SetDest(selectedObjs[0].dest + -selectedObjs[0].transform.forward * (i / rt) * selectedObjs[i].sepRadius + selectedObjs[0].transform.right.normalized * (i % rt) * selectedObjs[i].sepRadius);
                 return;
         }
     }
@@ -140,6 +148,6 @@ public class MouseController : MonoBehaviour
 
     private void OnValidate()
     {
-        //SetFormation();
+        SetFormation();
     }
 }
