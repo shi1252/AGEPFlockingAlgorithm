@@ -4,10 +4,8 @@ using UnityEngine;
 
 public class SelectableUnit : MonoBehaviour
 {
-    public float width = 25f;
-    public float height = 25f;
     protected bool isSelected;
-    public SpriteRenderer SelectedTexture;
+    SpriteRenderer SelectedTexture;
 
     public SelectableUnit leader;
 
@@ -25,8 +23,7 @@ public class SelectableUnit : MonoBehaviour
     public int indexJ;
 
     Rigidbody rb;
-    bool collStay = false;
-    Transform collTr;
+    bool seperation = false;
 
     private void Awake()
     {
@@ -44,11 +41,11 @@ public class SelectableUnit : MonoBehaviour
         {
             float dis = Vector3.Distance(transform.position, dest);
             Flocking();
-            if (dis < 0.1f)
+            if (dis < 0.1f && !seperation)
                 moveDir = Vector3.zero;
             if (moveDir != Vector3.zero)
             {
-                rb.velocity = moveDir.normalized * moveSpeed * Mathf.Clamp(dis / 0.3f, 0.8f, 1f);
+                rb.velocity = moveDir.normalized * moveSpeed * (seperation ? 1f : Mathf.Clamp(dis / 0.3f, 0.8f, 1f));
                 transform.forward = moveDir.normalized;
             }
         }
@@ -57,12 +54,12 @@ public class SelectableUnit : MonoBehaviour
     protected virtual void Flocking()
     {
         SetDirection();
+        Vector3 s = Seperation();
+        moveDir += s.normalized * sWeight;
         if (leader)
         {
-            Vector3 s = Seperation();
             if (Vector3.Distance(leader.transform.position, leader.dest) > 0.1f)
                 moveDir += leader.moveDir.normalized;
-            moveDir += s.normalized * sWeight;
         }
         AvoidObstacle();
     }
@@ -144,7 +141,8 @@ public class SelectableUnit : MonoBehaviour
         {
             dir += (transform.position - c.transform.position);
         }
-
+        if (dir != Vector3.zero) seperation = true;
+        else seperation = false;
         return dir;
     }
 
@@ -230,7 +228,8 @@ public class SelectableUnit : MonoBehaviour
         if (leader) return;
         SelectableUnit[] objs = new SelectableUnit[followers.Count];
         followers.CopyTo(objs);
-        int rt = (int)Mathf.Clamp(Mathf.Sqrt(followers.Count+1), 2f, float.MaxValue);
+        float root = Mathf.Sqrt(followers.Count + 1);
+        int rt = (int)Mathf.Clamp(root + (root % (int)root > Mathf.Epsilon ? 1 : 0), 1f, float.MaxValue);
         switch (MouseController.Instance.formation)
         {
             case FormationState.Line:
@@ -246,20 +245,5 @@ public class SelectableUnit : MonoBehaviour
                     objs[i].SetIndex(i, (int)360f / followers.Count);
                 return;
         }
-    }
-
-    private void OnCollisionStay(Collision collision)
-    {
-        if (collision.gameObject.layer == LayerMask.NameToLayer("Obstacle"))
-        {
-            collStay = true;
-            collTr = collision.transform;
-        }
-    }
-
-    private void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.layer == LayerMask.NameToLayer("Obstacle"))
-            collStay = false;
     }
 }
