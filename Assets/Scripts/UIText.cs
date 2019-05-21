@@ -16,9 +16,6 @@ public class UIText : MonoBehaviour
     {
         switch (MouseController.Instance.formation)
         {
-            case FormationState.None:
-                text.text = "None";
-                return;
             case FormationState.Line:
                 text.text = "Line";
                 return;

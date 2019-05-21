@@ -4,7 +4,6 @@ using UnityEngine;
 
 public enum FormationState
 {
-    None,
     Line,
     Square,
     Circle,
@@ -29,6 +28,7 @@ public class MouseController : MonoBehaviour
     Vector3 endPos = Vector3.zero;
 
     bool isDragging = false;
+    public bool useMouseControl = false;
 
     private void Awake()
     {
@@ -93,12 +93,12 @@ public class MouseController : MonoBehaviour
             }
         }
 
+        if (selectedObjs.Count > 0)
+            selectedObjs[0].BeLeader();
         for (int i = 1; i < selectedObjs.Count; i++)
         {
-            selectedObjs[i].leader = selectedObjs[0];
+            selectedObjs[i].ChooseLeader(selectedObjs[0]);
         }
-
-        SetFormation();
     }
 
     void MoveSelectedObjs()
@@ -108,26 +108,6 @@ public class MouseController : MonoBehaviour
         dest.y = 0;
 
         selectedObjs[0].SetDest(dest);
-    }
-
-    void SetFormation()
-    {
-        int rt = (int)Mathf.Clamp(Mathf.Sqrt(selectedObjs.Count), 2f, float.MaxValue);
-        switch (formation)
-        {
-            case FormationState.Line:
-                for (int i = 1; i < selectedObjs.Count; i++)
-                    selectedObjs[i].SetIndex(i);
-                return;
-            case FormationState.Square:
-                for (int i = 1; i < selectedObjs.Count; i++)
-                    selectedObjs[i].SetIndex(i / rt, i % rt);//SetDest(selectedObjs[0].dest + -selectedObjs[0].transform.forward * (i / rt) * selectedObjs[i].sepRadius + selectedObjs[0].transform.right.normalized * (i % rt) * selectedObjs[i].sepRadius);
-                return;
-            case FormationState.Circle:
-                for (int i = 1; i < selectedObjs.Count; i++)
-                    selectedObjs[i].SetIndex(i - 1, (int)360f/selectedObjs.Count);
-                return;
-        }
     }
 
     private void LateUpdate()
@@ -153,6 +133,10 @@ public class MouseController : MonoBehaviour
 
     private void OnValidate()
     {
-        SetFormation();
+        List<SelectableUnit> l = SelectableUnitManager.Instance.selectableObjsInScene;
+        for (int i=0;i<l.Count; i++)
+        {
+            if (!l[i].leader) l[i].SetIndex();
+        }
     }
 }

@@ -6,8 +6,8 @@ public class SelectableUnit : MonoBehaviour
 {
     public float width = 25f;
     public float height = 25f;
-    bool isSelected;
-    public GameObject SelectedTexture;
+    protected bool isSelected;
+    public SpriteRenderer SelectedTexture;
 
     public SelectableUnit leader;
 
@@ -15,105 +15,70 @@ public class SelectableUnit : MonoBehaviour
     [Range(0f, 1f)]
     public float sWeight = 0.33f;
     public float sepRadius = 2f;
-    [Range(0f, 1f)]
-    public float aWeight = 0.33f;
-    [Range(0f, 1f)]
-    public float cWeight = 0.34f;
-    public float recogRadius = 10f;
-    Vector3 moveDir = Vector3.zero;
+    [HideInInspector]
+    public Vector3 moveDir = Vector3.zero;
 
-    List<SelectableUnit> neighbors;
-    HashSet<SelectableUnit> followers;
+    public HashSet<SelectableUnit> followers;
 
     public Vector3 dest;
     public int indexI;
     public int indexJ;
 
+    Rigidbody rb;
+    bool collStay = false;
+    Transform collTr;
+
     private void Awake()
     {
+        rb = GetComponent<Rigidbody>();
+        SelectedTexture = GetComponentInChildren<SpriteRenderer>();
         UnSelected();
         SelectableUnitManager.Instance.selectableObjsInScene.Add(this);
-        neighbors = new List<SelectableUnit>();
         followers = new HashSet<SelectableUnit>();
-        ChangeDest();
+        SetDest(transform.position);
     }
 
-    private void Update()
+    void FixedUpdate()
     {
-        Flocking();
-        transform.position += moveDir.normalized * moveSpeed * Time.deltaTime;
-        transform.forward = moveDir.normalized;
-    }
-
-    void Flocking()
-    {
-        GetNeighbors();
-        if (neighbors.Count > 0)
+        if (isSelected)
         {
-            if (!leader) ChooseLeader();
-            else if (Vector3.Distance(transform.position, leader.transform.position) > recogRadius) ChooseLeader();
-
-            if (leader && Vector3.Distance(transform.position, leader.transform.position) > recogRadius) BeLeader();
-            if (!leader) SetIndex();
-            if (!leader && Vector3.Distance(transform.position, dest) < 0.1f)
-                ChangeDest();
-            SetDirection();
-            Vector3 s = Seperation();
-            Vector3 a = Vector3.zero;
-            Vector3 c = Vector3.zero;
-            //if (MouseController.Instance.formation == FormationState.None)
+            float dis = Vector3.Distance(transform.position, dest);
+            Flocking();
+            if (dis < 0.1f)
+                moveDir = Vector3.zero;
+            if (moveDir != Vector3.zero)
             {
-                a = Alignment();
-                c = Cohesion();
-                if (leader)
-                    moveDir += leader.moveDir.normalized;
+                rb.velocity = moveDir.normalized * moveSpeed * Mathf.Clamp(dis / 0.3f, 0.8f, 1f);
+                transform.forward = moveDir.normalized;
             }
-            moveDir += s.normalized * sWeight + a.normalized * aWeight + c.normalized * cWeight;
         }
-        else
+    }
+
+    protected virtual void Flocking()
+    {
+        SetDirection();
+        if (leader)
         {
-            BeLeader();
+            Vector3 s = Seperation();
+            if (Vector3.Distance(leader.transform.position, leader.dest) > 0.1f)
+                moveDir += leader.moveDir.normalized;
+            moveDir += s.normalized * sWeight;
         }
         AvoidObstacle();
     }
 
-    void ChangeDest()
-    {
-        dest = new Vector3(Random.Range(-width, width), 0f, Random.Range(-height, height));
-    }
-
-    void SetFormation()
-    {
-        if (leader)
-        {
-            float sr = sepRadius + 1f;
-            switch (MouseController.Instance.formation)
-            {
-                case FormationState.Line:
-                    dest = leader.transform.position + /*leader.transform.right.normalized*/ Vector3.right * indexI * sr;
-                    return;
-                case FormationState.Square:
-                    dest = leader.transform.position + /*leader.transform.right.normalized*/ Vector3.right * indexJ * sr + -/*leader.transform.forward.normalized*/Vector3.forward * indexI * sr;
-                    return;
-                case FormationState.Circle:
-                    Vector4 v = Matrix4x4.Rotate(Quaternion.Euler(0, indexI * indexJ, 0)) * new Vector4(0, 0, Mathf.Clamp(((sepRadius+1) * 360f) / (2 * Mathf.PI * indexJ), sepRadius+1, float.MaxValue), 0);
-                    dest = leader.transform.position + new Vector3(v.x, 0, v.z);
-                    return;
-            }
-        }
-    }
-
-    void BeLeader()
+    public void BeLeader()
     {
         if (leader)
         {
             leader.DeleteFollower(this);
             leader = null;
         }
-        followers.Clear();
-
-        if (Vector3.Distance(transform.position, dest) < 0.1f)
-            ChangeDest();
+        try
+        {
+            followers.Clear();
+        }
+        catch {}
 
         SetDirection();
     }
@@ -124,15 +89,13 @@ public class SelectableUnit : MonoBehaviour
         SetIndex();
     }
 
-    void ChooseLeader()
+    public void ChooseLeader(SelectableUnit l)
     {
-        SelectableUnit l = neighbors[0];
-        if (neighbors[0].leader) l = neighbors[0].leader;
         if (l == this) return;
 
         leader = l;
         l.AddFollower(this);
-        foreach(SelectableUnit t in followers)
+        foreach (SelectableUnit t in followers)
         {
             if (t == l) continue;
             t.leader = l;
@@ -141,98 +104,83 @@ public class SelectableUnit : MonoBehaviour
         l.SetIndex();
     }
 
-    void SetDirection()
+    protected void SetDirection()
     {
         if (leader)
         {
-            if (MouseController.Instance.formation != FormationState.None)
-            {
-                SetFormation();
-            }
-            else
-            {
-                moveDir = (leader.dest - transform.position).normalized;
-                return;
-            }
+            SetFormation();
         }
 
         moveDir = (dest - transform.position).normalized;
     }
 
-    void GetNeighbors()
+    protected void SetFormation()
     {
-        neighbors.Clear();
-
-        Collider[] colls = Physics.OverlapSphere(transform.position, recogRadius, LayerMask.GetMask("Boid"));
-        foreach (Collider c in colls)
+        if (leader)
         {
-            if (c.transform != transform)
-                neighbors.Add(c.GetComponent<SelectableUnit>());
+            float sr = sepRadius + 1f;
+            switch (MouseController.Instance.formation)
+            {
+                case FormationState.Line:
+                    dest = leader.dest + /*leader.transform.position*/  /*leader.transform.right.normalized*/ Vector3.right * indexI * sr;
+                    return;
+                case FormationState.Square:
+                    dest = leader.dest + /*leader.transform.position*/  /*leader.transform.right.normalized*/ Vector3.right * indexJ * sr + -/*leader.transform.forward.normalized*/Vector3.forward * indexI * sr;
+                    return;
+                case FormationState.Circle:
+                    Vector4 v = Matrix4x4.Rotate(Quaternion.Euler(0, indexI * indexJ, 0)) * new Vector4(0, 0, Mathf.Clamp(((sepRadius + 1) * 360f) / (2 * Mathf.PI * indexJ), sepRadius + 1, float.MaxValue), 0);
+                    dest = leader.dest + /*leader.transform.position*/  new Vector3(v.x, 0, v.z);
+                    return;
+            }
         }
     }
 
-    Vector3 Seperation()
+    protected Vector3 Seperation()
     {
         Vector3 dir = Vector3.zero;
 
         Collider[] colls = Physics.OverlapSphere(transform.position, sepRadius, LayerMask.GetMask("Boid"));
         foreach (Collider c in colls)
         {
-            dir += transform.position - c.transform.position;
+            dir += (transform.position - c.transform.position);
         }
 
         return dir;
     }
 
-    Vector3 Alignment()
-    {
-        Vector3 dir = Vector3.zero;
-
-        foreach (SelectableUnit t in neighbors)
-        {
-            dir += t.moveDir;
-        }
-
-        return dir;
-    }
-
-    Vector3 Cohesion()
-    {
-        Vector3 pos = Vector3.zero;
-
-        foreach (SelectableUnit t in neighbors)
-        {
-            pos += t.transform.position;
-        }
-
-        if (neighbors.Count > 0)
-            pos /= neighbors.Count;
-
-        return (pos - transform.position);
-    }
-
-    void AvoidObstacle()
+    protected void AvoidObstacle()
     {
         RaycastHit hit;
-        if (Physics.Raycast(transform.position, moveDir, out hit, sepRadius, LayerMask.GetMask("Obstacle")))
+        Vector3 newPos = transform.position + new Vector3(0.5f, 0, 0.5f);
+        if (Physics.Raycast(newPos, moveDir, out hit, 1f, LayerMask.GetMask("Obstacle")))
         {
-            moveDir = (transform.position - hit.point).normalized;
-            if (!leader)
-            {
-                ChangeDest();
-            }
-            return;
-            if (Physics.Raycast(transform.position, new Vector3(moveDir.normalized.x, 0, 0), out hit, moveSpeed * Time.deltaTime, LayerMask.GetMask("Obstacle")))
+            Debug.DrawRay(transform.position, hit.point - transform.position, Color.blue);
+            //moveDir = (transform.position - hit.point).normalized;
+            //return;
+            if (Physics.Raycast(newPos, new Vector3(moveDir.normalized.x, 0, 0), out hit, moveSpeed * Time.deltaTime, LayerMask.GetMask("Obstacle")))
             {
                 moveDir = new Vector3(0, 0, moveDir.z).normalized;
             }
-            if (Physics.Raycast(transform.position, new Vector3(0, 0, moveDir.normalized.z), out hit, moveSpeed * Time.deltaTime, LayerMask.GetMask("Obstacle")))
+            else if (Physics.Raycast(newPos, new Vector3(0, 0, moveDir.normalized.z), out hit, moveSpeed * Time.deltaTime, LayerMask.GetMask("Obstacle")))
             {
                 moveDir = new Vector3(moveDir.x, 0, 0).normalized;
             }
-
-            if (moveDir == Vector3.zero)
-                ChangeDest();
+        }
+        else
+        {
+            newPos = transform.position + new Vector3(-0.5f, 0, 0.5f);
+            if (Physics.Raycast(newPos, moveDir, out hit, 1f, LayerMask.GetMask("Obstacle")))
+            {
+                Debug.DrawRay(transform.position, hit.point - transform.position, Color.red);
+                if (Physics.Raycast(newPos, new Vector3(moveDir.normalized.x, 0, 0), out hit, moveSpeed * Time.deltaTime, LayerMask.GetMask("Obstacle")))
+                {
+                    moveDir = new Vector3(0, 0, moveDir.z).normalized;
+                }
+                else if (Physics.Raycast(newPos, new Vector3(0, 0, moveDir.normalized.z), out hit, moveSpeed * Time.deltaTime, LayerMask.GetMask("Obstacle")))
+                {
+                    moveDir = new Vector3(moveDir.x, 0, 0).normalized;
+                }
+            }
         }
     }
 
@@ -255,13 +203,13 @@ public class SelectableUnit : MonoBehaviour
 
     void Selected()
     {
-        SelectedTexture.SetActive(true);
+        SelectedTexture.enabled = true;
     }
 
     void UnSelected()
     {
-        SelectedTexture.SetActive(false);
-        leader = null;
+        SelectedTexture.enabled = false;
+        BeLeader();
         isSelected = false;
         dest = transform.position;
     }
@@ -282,7 +230,7 @@ public class SelectableUnit : MonoBehaviour
         if (leader) return;
         SelectableUnit[] objs = new SelectableUnit[followers.Count];
         followers.CopyTo(objs);
-        int rt = (int)Mathf.Clamp(Mathf.Sqrt(followers.Count), 2f, float.MaxValue);
+        int rt = (int)Mathf.Clamp(Mathf.Sqrt(followers.Count+1), 2f, float.MaxValue);
         switch (MouseController.Instance.formation)
         {
             case FormationState.Line:
@@ -295,8 +243,23 @@ public class SelectableUnit : MonoBehaviour
                 return;
             case FormationState.Circle:
                 for (int i = 0; i < followers.Count; i++)
-                    objs[i].SetIndex(i+1, (int)360f / followers.Count);
+                    objs[i].SetIndex(i, (int)360f / followers.Count);
                 return;
         }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Obstacle"))
+        {
+            collStay = true;
+            collTr = collision.transform;
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Obstacle"))
+            collStay = false;
     }
 }
