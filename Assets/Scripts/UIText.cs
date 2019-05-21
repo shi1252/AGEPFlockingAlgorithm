@@ -25,6 +25,9 @@ public class UIText : MonoBehaviour
             case FormationState.Square:
                 text.text = "Square";
                 return;
+            case FormationState.Circle:
+                text.text = "Circle";
+                return;
         }
     }
 }

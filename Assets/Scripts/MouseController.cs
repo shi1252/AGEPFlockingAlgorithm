@@ -7,6 +7,7 @@ public enum FormationState
     None,
     Line,
     Square,
+    Circle,
     Length
 }
 
@@ -121,6 +122,10 @@ public class MouseController : MonoBehaviour
             case FormationState.Square:
                 for (int i = 1; i < selectedObjs.Count; i++)
                     selectedObjs[i].SetIndex(i / rt, i % rt);//SetDest(selectedObjs[0].dest + -selectedObjs[0].transform.forward * (i / rt) * selectedObjs[i].sepRadius + selectedObjs[0].transform.right.normalized * (i % rt) * selectedObjs[i].sepRadius);
+                return;
+            case FormationState.Circle:
+                for (int i = 1; i < selectedObjs.Count; i++)
+                    selectedObjs[i].SetIndex(i - 1, (int)360f/selectedObjs.Count);
                 return;
         }
     }

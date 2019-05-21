@@ -719,11 +719,11 @@ MonoBehaviour:
   SelectedTexture: {fileID: 122068868}
   leader: {fileID: 0}
   moveSpeed: 10
-  sWeight: 1
+  sWeight: 0.5
   sepRadius: 2
   aWeight: 0.33
   cWeight: 0.34
-  recogRadius: 16
+  recogRadius: 5
   dest: {x: 0, y: 0, z: 0}
   indexI: 0
   indexJ: 0
@@ -1098,11 +1098,11 @@ MonoBehaviour:
   SelectedTexture: {fileID: 639879674}
   leader: {fileID: 0}
   moveSpeed: 10
-  sWeight: 1
+  sWeight: 0.5
   sepRadius: 2
   aWeight: 0.33
   cWeight: 0.34
-  recogRadius: 16
+  recogRadius: 5
   dest: {x: 0, y: 0, z: 0}
   indexI: 0
   indexJ: 0
@@ -1216,11 +1216,11 @@ MonoBehaviour:
   SelectedTexture: {fileID: 1713440781}
   leader: {fileID: 0}
   moveSpeed: 10
-  sWeight: 1
+  sWeight: 0.5
   sepRadius: 2
   aWeight: 0.33
   cWeight: 0.34
-  recogRadius: 16
+  recogRadius: 5
   dest: {x: 0, y: 0, z: 0}
   indexI: 0
   indexJ: 0
@@ -1504,11 +1504,11 @@ MonoBehaviour:
   SelectedTexture: {fileID: 891957345}
   leader: {fileID: 0}
   moveSpeed: 10
-  sWeight: 1
+  sWeight: 0.5
   sepRadius: 2
   aWeight: 0.33
   cWeight: 0.34
-  recogRadius: 16
+  recogRadius: 5
   dest: {x: 0, y: 0, z: 0}
   indexI: 0
   indexJ: 0
@@ -1622,11 +1622,11 @@ MonoBehaviour:
   SelectedTexture: {fileID: 1141065800}
   leader: {fileID: 0}
   moveSpeed: 10
-  sWeight: 1
+  sWeight: 0.5
   sepRadius: 2
   aWeight: 0.33
   cWeight: 0.34
-  recogRadius: 16
+  recogRadius: 5
   dest: {x: 0, y: 0, z: 0}
   indexI: 0
   indexJ: 0

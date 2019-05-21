@@ -61,7 +61,7 @@ public class SelectableUnit : MonoBehaviour
             Vector3 s = Seperation();
             Vector3 a = Vector3.zero;
             Vector3 c = Vector3.zero;
-            if (MouseController.Instance.formation == FormationState.None)
+            //if (MouseController.Instance.formation == FormationState.None)
             {
                 a = Alignment();
                 c = Cohesion();
@@ -95,19 +95,33 @@ public class SelectableUnit : MonoBehaviour
                 case FormationState.Square:
                     dest = leader.transform.position + /*leader.transform.right.normalized*/ Vector3.right * indexJ * sr + -/*leader.transform.forward.normalized*/Vector3.forward * indexI * sr;
                     return;
+                case FormationState.Circle:
+                    Vector4 v = Matrix4x4.Rotate(Quaternion.Euler(0, indexI * indexJ, 0)) * new Vector4(0, 0, Mathf.Clamp(((sepRadius+1) * 360f) / (2 * Mathf.PI * indexJ), sepRadius+1, float.MaxValue), 0);
+                    dest = leader.transform.position + new Vector3(v.x, 0, v.z);
+                    return;
             }
         }
     }
 
     void BeLeader()
     {
-        leader = null;
+        if (leader)
+        {
+            leader.DeleteFollower(this);
+            leader = null;
+        }
         followers.Clear();
 
         if (Vector3.Distance(transform.position, dest) < 0.1f)
             ChangeDest();
 
-                    SetDirection();
+        SetDirection();
+    }
+
+    public void DeleteFollower(SelectableUnit f)
+    {
+        followers.Remove(f);
+        SetIndex();
     }
 
     void ChooseLeader()
@@ -278,6 +292,10 @@ public class SelectableUnit : MonoBehaviour
             case FormationState.Square:
                 for (int i = 0; i < followers.Count; i++)
                     objs[i].SetIndex((i+1) / rt, (i+1) % rt);//SetDest(selectedObjs[0].dest + -selectedObjs[0].transform.forward * (i / rt) * selectedObjs[i].sepRadius + selectedObjs[0].transform.right.normalized * (i % rt) * selectedObjs[i].sepRadius);
+                return;
+            case FormationState.Circle:
+                for (int i = 0; i < followers.Count; i++)
+                    objs[i].SetIndex(i+1, (int)360f / followers.Count);
                 return;
         }
     }
